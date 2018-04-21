@@ -51,6 +51,32 @@ class App {
     };
     this.assetsLoaded = 0;
     this.assetsTotal = 0;
+    
+    this.TILE = {
+      EMPTY: 0,
+      RED: 1,
+      BLUE: 2,
+      YELLOW: 3,
+      GREEN: 4,
+      PINK: 5,
+      ORANGE: 6,
+      random: () => {
+        return Math.floor(Math.random() * 6 + 1);
+      },
+    };
+    this.TILE_SIZE = 64;  //Pixel width and height
+    this.GRID_ROWS = 6;
+    this.GRID_COLS = 6;
+    this.GRID_OFFSET_X = 64;
+    this.GRID_OFFSET_Y = 64;
+    
+    this.grid = [];
+    for (let row = 0; row < this.GRID_ROWS; row++) {
+      this.grid.push([]);
+      for (let col = 0; col < this.GRID_COLS; col++) {
+        this.grid[row].push(this.TILE.random());
+      }
+    }
     //--------------------------------
     
     //Prepare Input
@@ -110,8 +136,28 @@ class App {
   //----------------------------------------------------------------
   
   paint() {
+    let c2d = this.context2d;
+    
     //Clear
-    this.context2d.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
+    c2d.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
+    
+    //Paint the grid
+    c2d.beginPath();
+    c2d.lineWidth = "2";
+    c2d.strokeStyle = "#ccc";
+    c2d.rect(0, 0, this.canvasWidth, this.canvasHeight);
+    for (let row = 0; row < this.GRID_ROWS; row++) {
+      for (let col = 0; col < this.GRID_COLS; col++) {
+        c2d.rect(
+          this.GRID_OFFSET_X + col * this.TILE_SIZE,
+          this.GRID_OFFSET_Y + row * this.TILE_SIZE,
+          this.TILE_SIZE, this.TILE_SIZE
+        );
+      }
+    }
+    c2d.stroke();
+    c2d.closePath();
+
   }
   
   //----------------------------------------------------------------
