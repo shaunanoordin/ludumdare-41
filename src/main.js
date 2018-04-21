@@ -13,6 +13,12 @@ Genres.
 import * as APP from "./constants.js";  //Naming note: all caps.
 import { Utility } from "./utility.js";
 
+const GAME_STATE = {
+  READY: 'ready_and_waiting_for_user_input',
+  ACTIVE: 'active_and_receiving_user_input',
+  BUSY: 'processing_events_and_not_receiving_user_input',
+};
+
 /*  Primary App Class
  */
 //==============================================================================
@@ -34,7 +40,7 @@ class App {
     this.canvasSizeRatio = 1;
     this.canvasWidth = this.html.canvas.width;  //The intended width/height of the canvas.
     this.canvasHeight = this.html.canvas.height;
-    this.state = null;
+    this.state = GAME_STATE.READY;
     //--------------------------------
     
     //Account for graphical settings
@@ -72,11 +78,15 @@ class App {
     
     this.grid = [];
     for (let row = 0; row < this.GRID_ROWS; row++) {
-      this.grid.push([]);
       for (let col = 0; col < this.GRID_COLS; col++) {
-        this.grid[row].push(this.TILE.random());
+        this.grid.push({
+          row, col,
+          value: this.TILE.random()
+        });
       }
     }
+    
+    this.lineOfTouchedTiles = [];
     //--------------------------------
     
     //Prepare Input
@@ -130,6 +140,58 @@ class App {
   //----------------------------------------------------------------
   
   run() {
+    
+    //--------------------------------
+    const lineOfTouchedTiles = this.lineOfTouchedTiles;
+    
+    //Check if user has touched a tile and is starting to draw a line.
+    if (this.state === GAME_STATE.READY) {
+      
+      //If a tile is touched, start the line drawing!
+      const touchedTile = this.getTouchedTile();
+      if (touchedTile) {  //If there's a touched tile, it implies this.pointer.state === APP.INPUT_ACTIVE.
+        this.state = GAME_STATE.ACTIVE;
+        lineOfTouchedTiles.push(touchedTile);
+      }
+      
+    } else if (this.state === GAME_STATE.ACTIVE) {
+      
+      const touchedTile = this.getTouchedTile();
+      
+      //If a tile is touched, checked if it's a "valid" tile to add to the line of tiles.
+      //A tile is valid only if it's not already in the line of tiles, and it's adjacent to the "head" of the line.
+      if (touchedTile && lineOfTouchedTiles.length > 0) {
+        const headTile = lineOfTouchedTiles[lineOfTouchedTiles.length-1];
+        let tileIsValid = !this.lineOfTouchedTiles.find((tile) => {
+          return tile.row === touchedTile.row && tile.col === touchedTile.col
+        });
+        
+        if (tileIsValid) {
+          lineOfTouchedTiles.push(touchedTile);
+        }
+        
+        console.log(lineOfTouchedTiles.length);
+      }
+      
+      if (this.pointer.state === APP.INPUT_ENDED || this.pointer.state === APP.INPUT_IDLE) {
+        this.state = GAME_STATE.BUSY;
+      }
+      
+    } else if (this.state === GAME_STATE.BUSY) {
+      
+      console.log(lineOfTouchedTiles);
+      this.lineOfTouchedTiles = [];
+      
+      this.state = GAME_STATE.READY;
+      
+    }
+    
+    
+    
+    
+    
+    //--------------------------------
+    
     this.paint();
   }
   
@@ -157,7 +219,6 @@ class App {
     }
     c2d.stroke();
     c2d.closePath();
-
   }
   
   //----------------------------------------------------------------
@@ -197,6 +258,23 @@ class App {
     let inputX = (clientX - this.boundingBox.left) * this.canvasSizeRatio;
     let inputY = (clientY - this.boundingBox.top) * this.canvasSizeRatio;
     return { x: inputX, y: inputY };
+  }
+  
+  //----------------------------------------------------------------
+
+  getTouchedTile() {
+    //Sanity check: can't get the touched tile if nothing is touched.
+    if (this.pointer.state !== APP.INPUT_ACTIVE) return null;
+
+    const col = Math.floor((this.pointer.now.x - this.GRID_OFFSET_X) / this.TILE_SIZE);
+    const row = Math.floor((this.pointer.now.y - this.GRID_OFFSET_Y) / this.TILE_SIZE);
+    
+    //Sanity check: make sure we're within bounds.
+    if (col < 0 || col >= this.GRID_COLS || row < 0 || row >= this.GRID_ROWS) {
+      return null;
+    }
+    
+    return { col, row };
   }
   
   //----------------------------------------------------------------
