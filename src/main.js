@@ -166,11 +166,16 @@ class App {
           return tile.row === touchedTile.row && tile.col === touchedTile.col
         });
         
+        tileIsValid = tileIsValid && (
+          (headTile.row === touchedTile.row + 1 && headTile.col === touchedTile.col) ||
+          (headTile.row === touchedTile.row - 1 && headTile.col === touchedTile.col) ||
+          (headTile.row === touchedTile.row && headTile.col === touchedTile.col + 1) ||
+          (headTile.row === touchedTile.row && headTile.col === touchedTile.col - 1)
+        );
+        
         if (tileIsValid) {
           lineOfTouchedTiles.push(touchedTile);
         }
-        
-        console.log(lineOfTouchedTiles.length);
       }
       
       if (this.pointer.state === APP.INPUT_ENDED || this.pointer.state === APP.INPUT_IDLE) {
@@ -179,9 +184,8 @@ class App {
       
     } else if (this.state === GAME_STATE.BUSY) {
       
-      console.log(lineOfTouchedTiles);
-      this.lineOfTouchedTiles = [];
-      
+      //Reset
+      this.lineOfTouchedTiles = [];      
       this.state = GAME_STATE.READY;
       
     }
@@ -207,7 +211,12 @@ class App {
     //--------------------------------
     c2d.beginPath();
     c2d.lineWidth = "2";
-    c2d.strokeStyle = "#ccc";
+    switch (this.state) {
+      case GAME_STATE.READY: c2d.strokeStyle = "#ccc"; break;
+      case GAME_STATE.ACTIVE: c2d.strokeStyle = "#ff9"; break;
+      case GAME_STATE.BUSY: c2d.strokeStyle = "#c33"; break;
+      default: c2d.strokeStyle = "#333";
+    }
     c2d.rect(0, 0, this.canvasWidth, this.canvasHeight);
     for (let row = 0; row < this.GRID_ROWS; row++) {
       for (let col = 0; col < this.GRID_COLS; col++) {
