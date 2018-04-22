@@ -259,7 +259,7 @@ class App {
             return ta.row === tile.row - 1 && ta.col === tile.col;
           });
           
-          if (tile.value === this.TILES.EMPTY && tileAbove && tileAbove.isDropping) {  //If it's an empty tile receiving a falling tile, overwrite it.
+          if (tileAbove && tileAbove.isDropping) {  //If it's an empty tile receiving a falling tile, overwrite it.
             return {
               row: tile.row,
               col: tile.col,
