@@ -29,7 +29,7 @@ class App {
     this.config = {
       framesPerSecond: APP.FRAMES_PER_SECOND,
       debugMode: false,
-      autoFitCanvas: true,
+      autoFitCanvas: false,
     };    
     this.html = {
       app: document.getElementById("app"),
@@ -53,6 +53,15 @@ class App {
     //Game Constants
     //--------------------------------
     this.MINIMUM_LINE_LENGTH = 3;
+    this.COLOURS = {
+      DEFAULT: "#666",
+      READY: "#999",
+      ACTIVE: "#666",
+      ACTIVE_STRONG: "#333",
+      BUSY: "#ccc",
+      HIGHLIGHT_WEAK: "#ccc",
+      HIGHLIGHT_STRONG: "#fff",
+    };
     //--------------------------------
     
     //Game Objects
@@ -97,7 +106,11 @@ class App {
     //Tracks when tiles drop.
     this.dropTilesNow = false;
     this.dropDistance = 0;
-    this.dropSpeed = 4;
+    this.dropSpeed = 1;  //Drop speed changes depending on the height of the line of touched tiles.
+    this.DROP_SPEED_FACTOR = 4;
+    
+    this.score = 0;
+    this.foodOrders = [];
     //--------------------------------
     
     //Prepare Input
@@ -212,19 +225,24 @@ class App {
     } else if (this.state === GAME_STATE.BUSY) {
       
       //If user has just finished drawing a valid line - process it now.
-      if (this.lineOfTouchedTiles.length > 0) {
+      if (lineOfTouchedTiles.length > 0) {
         //TODO
-        console.log(this.lineOfTouchedTiles);
+        console.log(lineOfTouchedTiles);
         
         //Clear the line of touched tiles.
-        this.lineOfTouchedTiles.map((touchedTile) => {
+        const uniqueRows = [];  //The height of the line is used to determine the drop speed.
+        lineOfTouchedTiles.map((touchedTile) => {
           this.grid.map((tile) => {
             if (tile.row === touchedTile.row && tile.col === touchedTile.col) {
+              //If it's a touched tile, empty it. The this.dropTiles() will later do the dropping.
               tile.value = this.TILES.EMPTY;
+              //Keep track of the height of the line.
+              if (!uniqueRows.includes(tile.row)) { uniqueRows.push(tile.row); }
             }
           });
         });
         this.lineOfTouchedTiles = [];
+        this.dropSpeed = Math.max(1, Math.sqrt(uniqueRows.length)) * this.DROP_SPEED_FACTOR;
       }
       
       //If there are any empty tiles, drop the tiles down!
@@ -332,13 +350,13 @@ class App {
     c2d.closePath();
     c2d.lineWidth = "2";
     switch (this.state) {
-      case GAME_STATE.READY: c2d.strokeStyle = "#ccc"; break;
+      case GAME_STATE.READY: c2d.strokeStyle = this.COLOURS.READY; break;
       case GAME_STATE.ACTIVE:
         c2d.strokeStyle = (this.lineOfTouchedTiles.length < this.MINIMUM_LINE_LENGTH)
-          ? "#ccc" : "#fff";
+          ? this.COLOURS.ACTIVE : this.COLOURS.ACTIVE_STRONG;
         break;
-      case GAME_STATE.BUSY: c2d.strokeStyle = "#333"; break;
-      default: c2d.strokeStyle = "#999";
+      case GAME_STATE.BUSY: c2d.strokeStyle = this.COLOURS.BUSY; break;
+      default: c2d.strokeStyle = this.COLOURS.DEFAULT;
     }
     c2d.stroke();
     //--------------------------------
@@ -355,7 +373,7 @@ class App {
     });    
     c2d.closePath();
     c2d.fillStyle = (this.lineOfTouchedTiles.length < this.MINIMUM_LINE_LENGTH)
-      ? "#ccc" : "#fff";
+      ? this.COLOURS.ACTIVE : this.COLOURS.ACTIVE_STRONG;
     c2d.fill();
     //--------------------------------
     
@@ -384,7 +402,7 @@ class App {
     c2d.lineCap = "round";
     c2d.lineJoin = "round";
     c2d.strokeStyle = (this.lineOfTouchedTiles.length < this.MINIMUM_LINE_LENGTH)
-      ? "#999" : "#333";
+      ? this.COLOURS.HIGHLIGHT_WEAK : this.COLOURS.HIGHLIGHT_STRONG;
     c2d.stroke();
     //--------------------------------
   }
