@@ -36,6 +36,8 @@ class App {
       app: document.getElementById("app"),
       canvas: document.getElementById("canvas"),
       controls: document.getElementById("controls"),
+      message: document.getElementById("message"),
+      controls: document.getElementById("controls"),
     };
     this.context2d = this.html.canvas.getContext("2d");
     this.boundingBox = null;  //To be defined by this.updateSize().
@@ -112,7 +114,11 @@ class App {
     this.DROP_SPEED_FACTOR = 4;
     
     this.score = 0;
+    this.message = "";
+    this.messageTimer = 0;
+    this.DEFAULT_MESSAGE_TIME = 2 * APP.FRAMES_PER_SECOND;
     this.foodOrders = [];
+    this.fillFoodOrders();
     //--------------------------------
     
     //Prepare Input
@@ -260,6 +266,8 @@ class App {
     this.paint();
   }
   
+  //----------------------------------------------------------------
+  
   /*  Drops all tiles.
       Returns true if there's nothign else to drop, false otherwise.
    */
@@ -326,6 +334,19 @@ class App {
     });
 
     return doneDropping;
+  }
+  
+  /*  Adds a temporary message.
+   */
+  addMessage(message) {
+    this.message = message;
+    this.messageTimer = this.DEFAULT_MESSAGE_TIME;
+  }
+
+  /*  Adds food orders.
+   */
+  fillFoodOrders() {
+    
   }
   
   //----------------------------------------------------------------
