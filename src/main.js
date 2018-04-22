@@ -82,16 +82,22 @@ class App {
     this.GRID_OFFSET_Y = 64;
     
     this.grid = [];
-    for (let row = 0; row < this.GRID_ROWS; row++) {
+    for (let row = -1; row < this.GRID_ROWS; row++) {
       for (let col = 0; col < this.GRID_COLS; col++) {
         this.grid.push({
           row, col,
-          value: this.TILES.random()
+          value: this.TILES.random(),
+          isDropping: false,
         });
       }
     }
     
     this.lineOfTouchedTiles = [];
+    
+    //Tracks when tiles drop.
+    this.dropTilesNow = false;
+    this.dropDistance = 0;
+    this.dropSpeed = 1;
     //--------------------------------
     
     //Prepare Input
@@ -190,15 +196,14 @@ class App {
           lineOfTouchedTiles.pop();
         }
       }
-      
+
+      //If user has stopped drawing a line of tiles, let's process it.      
       if (this.pointer.state === APP.INPUT_ENDED || this.pointer.state === APP.INPUT_IDLE) {
         if (lineOfTouchedTiles.length >= this.MINIMUM_LINE_LENGTH) {
-          //SUCCESS
+          //OK, there's a valid line. Pass it to the "busy state" logic to process it.
           this.state = GAME_STATE.BUSY;
         } else {
-          //DON'T DO ANYTHING
-          
-          //Reset
+          //If there's no valid line, just reset the input.
           this.lineOfTouchedTiles = [];      
           this.state = GAME_STATE.READY;
         }
@@ -206,28 +211,101 @@ class App {
       
     } else if (this.state === GAME_STATE.BUSY) {
       
-      console.log('--------');
-      
-      //User has just finished drawing a valid line - process it now.
+      //If user has just finished drawing a valid line - process it now.
       if (this.lineOfTouchedTiles.length > 0) {
+        //TODO
         console.log(this.lineOfTouchedTiles);
         
         //Clear the line of touched tiles.
+        this.lineOfTouchedTiles.map((touchedTile) => {
+          this.grid.map((tile) => {
+            if (tile.row === touchedTile.row && tile.col === touchedTile.col) {
+              tile.value = this.TILES.EMPTY;
+            }
+          });
+        });
         this.lineOfTouchedTiles = [];
-        
-      } else {
-        
-        //All done, now let's 
-        this.state = GAME_STATE.READY;
-        
       }
       
+      //If there are any empty tiles, drop the tiles down!
+      const doneDropping = this.dropTiles();
       
-      
+      //Otherwise, it's all good, now let users continue playing.
+      if (doneDropping) {
+        this.state = GAME_STATE.READY;
+      }
     }
     //--------------------------------
     
     this.paint();
+  }
+  
+  /*  Drops all tiles.
+      Returns true if there's nothign else to drop, false otherwise.
+   */
+  dropTiles() {
+    //If we're in drop mode, drop every falling tile by the drop speed.
+    //Once the drop distance reaches (or exceeds) the point where the falling
+    //tiles reach the next row below it (where the empty tiles are), overwrite
+    //the empty tiles with the falling tiles. Copy a new grid, to be safe.
+    //Also, don't forget to refresh the buffer above the grid.
+    
+    if (this.dropTilesNow) {
+      this.dropDistance += this.dropSpeed;
+      
+      if (this.dropDistance > this.TILE_SIZE) {
+        const newGrid = this.grid.map((tile) => {
+          const tileAbove = this.grid.find((ta) => {
+            return ta.row === tile.row - 1 && ta.col === tile.col;
+          });
+          
+          if (tile.value === this.TILES.EMPTY && tileAbove && tileAbove.isDropping) {  //If it's an empty tile receiving a falling tile, overwrite it.
+            return {
+              row: tile.row,
+              col: tile.col,
+              value: tileAbove.value,
+              isDropping: false,
+            };
+          } else if (!tileAbove) {  //If it's a tile in the buffer row, refresh it.
+            return {
+              row: tile.row,
+              col: tile.col,
+              value: this.TILES.random(),
+              isDropping: false,
+            }
+          } else {  //Otherwise, keep the tile.
+            return {
+              row: tile.row,
+              col: tile.col,
+              value: tile.value,
+              isDropping: false,
+            };
+          }
+        });
+        this.grid = newGrid;
+        
+        this.dropDistance = 0;
+        this.dropTilesNow = false;  //OK, stop dropping.
+      }
+    }
+    
+    //Now check if we need to continue dropping.
+    //For each tile, check if there's an empty tile below it. If there is, mark
+    //the tile as a falling tile.
+
+    let doneDropping = true;
+    this.grid.map((tile) => {
+      const tileBelow = this.grid.find((tb) => {
+        return tb.row === tile.row + 1 && tb.col === tile.col;
+      });
+      if (tileBelow && tileBelow.value === this.TILES.EMPTY) {
+        tile.isDropping = true;
+        this.dropTilesNow = true;
+        doneDropping = false;  //Gotta keep dropping!
+      }
+    });
+
+    return doneDropping;
   }
   
   //----------------------------------------------------------------
@@ -315,6 +393,8 @@ class App {
     let c2d = this.context2d;
     
     grid.map((tile) => {
+      if (tile.value === this.TILES.EMPTY) return;
+      
       c2d.beginPath();
       c2d.arc(
         tile.col * this.TILE_SIZE + this.TILE_SIZE / 2 + this.GRID_OFFSET_X,
