@@ -50,7 +50,12 @@ class App {
     this.context2d.imageSmoothingEnabled = false;
     //--------------------------------
     
-    //Initialise Game Objects
+    //Game Constants
+    //--------------------------------
+    this.MINIMUM_LINE_LENGTH = 3;
+    //--------------------------------
+    
+    //Game Objects
     //--------------------------------
     this.assets = {
       images: {}
@@ -58,7 +63,7 @@ class App {
     this.assetsLoaded = 0;
     this.assetsTotal = 0;
     
-    this.TILE = {
+    this.TILES = {
       EMPTY: 0,
       RED: 1,
       BLUE: 2,
@@ -73,20 +78,26 @@ class App {
     this.TILE_SIZE = 64;  //Pixel width and height
     this.GRID_ROWS = 6;
     this.GRID_COLS = 6;
-    this.GRID_OFFSET_X = 64;
+    this.GRID_OFFSET_X = 128;
     this.GRID_OFFSET_Y = 64;
     
     this.grid = [];
-    for (let row = 0; row < this.GRID_ROWS; row++) {
+    for (let row = -1; row < this.GRID_ROWS; row++) {
       for (let col = 0; col < this.GRID_COLS; col++) {
         this.grid.push({
           row, col,
-          value: this.TILE.random()
+          value: this.TILES.random(),
+          isDropping: false,
         });
       }
     }
     
     this.lineOfTouchedTiles = [];
+    
+    //Tracks when tiles drop.
+    this.dropTilesNow = false;
+    this.dropDistance = 0;
+    this.dropSpeed = 4;
     //--------------------------------
     
     //Prepare Input
@@ -162,6 +173,8 @@ class App {
       //A tile is valid only if it's not already in the line of tiles, and it's adjacent to the "head" of the line.
       if (touchedTile && lineOfTouchedTiles.length > 0) {
         const headTile = lineOfTouchedTiles[lineOfTouchedTiles.length-1];
+        const prevHeadTile = (lineOfTouchedTiles.length > 1)
+          ? lineOfTouchedTiles[lineOfTouchedTiles.length-2] : null;
         let tileIsValid = !this.lineOfTouchedTiles.find((tile) => {
           return tile.row === touchedTile.row && tile.col === touchedTile.col
         });
@@ -172,31 +185,127 @@ class App {
           (headTile.row === touchedTile.row && headTile.col === touchedTile.col + 1) ||
           (headTile.row === touchedTile.row && headTile.col === touchedTile.col - 1)
         );
-        
+    
+        //If the tile is valid it, add it to the line 
         if (tileIsValid) {
           lineOfTouchedTiles.push(touchedTile);
         }
+        
+        //Alternatively, the user might be trying to "walk back" the line.
+        if (prevHeadTile && touchedTile.row === prevHeadTile.row && touchedTile.col === prevHeadTile.col) {
+          lineOfTouchedTiles.pop();
+        }
       }
-      
+
+      //If user has stopped drawing a line of tiles, let's process it.      
       if (this.pointer.state === APP.INPUT_ENDED || this.pointer.state === APP.INPUT_IDLE) {
-        this.state = GAME_STATE.BUSY;
+        if (lineOfTouchedTiles.length >= this.MINIMUM_LINE_LENGTH) {
+          //OK, there's a valid line. Pass it to the "busy state" logic to process it.
+          this.state = GAME_STATE.BUSY;
+        } else {
+          //If there's no valid line, just reset the input.
+          this.lineOfTouchedTiles = [];      
+          this.state = GAME_STATE.READY;
+        }
       }
       
     } else if (this.state === GAME_STATE.BUSY) {
       
-      //Reset
-      this.lineOfTouchedTiles = [];      
-      this.state = GAME_STATE.READY;
+      //If user has just finished drawing a valid line - process it now.
+      if (this.lineOfTouchedTiles.length > 0) {
+        //TODO
+        console.log(this.lineOfTouchedTiles);
+        
+        //Clear the line of touched tiles.
+        this.lineOfTouchedTiles.map((touchedTile) => {
+          this.grid.map((tile) => {
+            if (tile.row === touchedTile.row && tile.col === touchedTile.col) {
+              tile.value = this.TILES.EMPTY;
+            }
+          });
+        });
+        this.lineOfTouchedTiles = [];
+      }
       
+      //If there are any empty tiles, drop the tiles down!
+      const doneDropping = this.dropTiles();
+      
+      //Otherwise, it's all good, now let users continue playing.
+      if (doneDropping) {
+        this.state = GAME_STATE.READY;
+      }
     }
-    
-    
-    
-    
-    
     //--------------------------------
     
     this.paint();
+  }
+  
+  /*  Drops all tiles.
+      Returns true if there's nothign else to drop, false otherwise.
+   */
+  dropTiles() {
+    //If we're in drop mode, drop every falling tile by the drop speed.
+    //Once the drop distance reaches (or exceeds) the point where the falling
+    //tiles reach the next row below it (where the empty tiles are), overwrite
+    //the empty tiles with the falling tiles. Copy a new grid, to be safe.
+    //Also, don't forget to refresh the buffer above the grid.
+    
+    if (this.dropTilesNow) {
+      this.dropDistance += this.dropSpeed;
+      
+      if (this.dropDistance > this.TILE_SIZE) {
+        const newGrid = this.grid.map((tile) => {
+          const tileAbove = this.grid.find((ta) => {
+            return ta.row === tile.row - 1 && ta.col === tile.col;
+          });
+          
+          if (tileAbove && tileAbove.isDropping) {  //If it's an empty tile receiving a falling tile, overwrite it.
+            return {
+              row: tile.row,
+              col: tile.col,
+              value: tileAbove.value,
+              isDropping: false,
+            };
+          } else if (!tileAbove) {  //If it's a tile in the buffer row, refresh it.
+            return {
+              row: tile.row,
+              col: tile.col,
+              value: this.TILES.random(),
+              isDropping: false,
+            }
+          } else {  //Otherwise, keep the tile.
+            return {
+              row: tile.row,
+              col: tile.col,
+              value: tile.value,
+              isDropping: false,
+            };
+          }
+        });
+        this.grid = newGrid;
+        
+        this.dropDistance = 0;
+        this.dropTilesNow = false;  //OK, stop dropping.
+      }
+    }
+    
+    //Now check if we need to continue dropping.
+    //For each tile, check if there's an empty tile below it. If there is, mark
+    //the tile as a falling tile.
+
+    let doneDropping = true;
+    this.grid.map((tile) => {
+      const tileBelow = this.grid.find((tb) => {
+        return tb.row === tile.row + 1 && tb.col === tile.col;
+      });
+    if (tileBelow && (tileBelow.value === this.TILES.EMPTY || tileBelow.isDropping)) {
+        tile.isDropping = true;
+        this.dropTilesNow = true;
+        doneDropping = false;  //Gotta keep dropping!
+      }
+    });
+
+    return doneDropping;
   }
   
   //----------------------------------------------------------------
@@ -210,13 +319,6 @@ class App {
     //Paint the grid
     //--------------------------------
     c2d.beginPath();
-    c2d.lineWidth = "2";
-    switch (this.state) {
-      case GAME_STATE.READY: c2d.strokeStyle = "#ccc"; break;
-      case GAME_STATE.ACTIVE: c2d.strokeStyle = "#ff9"; break;
-      case GAME_STATE.BUSY: c2d.strokeStyle = "#c33"; break;
-      default: c2d.strokeStyle = "#333";
-    }
     c2d.rect(0, 0, this.canvasWidth, this.canvasHeight);
     for (let row = 0; row < this.GRID_ROWS; row++) {
       for (let col = 0; col < this.GRID_COLS; col++) {
@@ -227,15 +329,23 @@ class App {
         );
       }
     }
-    c2d.stroke();
     c2d.closePath();
+    c2d.lineWidth = "2";
+    switch (this.state) {
+      case GAME_STATE.READY: c2d.strokeStyle = "#ccc"; break;
+      case GAME_STATE.ACTIVE:
+        c2d.strokeStyle = (this.lineOfTouchedTiles.length < this.MINIMUM_LINE_LENGTH)
+          ? "#ccc" : "#fff";
+        break;
+      case GAME_STATE.BUSY: c2d.strokeStyle = "#333"; break;
+      default: c2d.strokeStyle = "#999";
+    }
+    c2d.stroke();
     //--------------------------------
     
-    
-    //Paint the line of touched tiles
+    //Paint the line of touched tiles (background)
     //--------------------------------
     c2d.beginPath();
-    c2d.fillStyle = "#ffc";
     this.lineOfTouchedTiles.map((tile) => {
       c2d.rect(
         this.GRID_OFFSET_X + tile.col * this.TILE_SIZE,
@@ -243,15 +353,20 @@ class App {
         this.TILE_SIZE, this.TILE_SIZE
       );
     });    
-    c2d.fill();
     c2d.closePath();
+    c2d.fillStyle = (this.lineOfTouchedTiles.length < this.MINIMUM_LINE_LENGTH)
+      ? "#ccc" : "#fff";
+    c2d.fill();
     //--------------------------------
     
-    //Paint the line of touched tiles
+    //Paint the tiles
+    //--------------------------------
+    this.paint_tiles(this.grid);
+    //--------------------------------
+    
+    //Paint the line of touched tiles (overlay line)
     //--------------------------------
     c2d.beginPath();
-    c2d.lineWidth = "8";
-    c2d.strokeStyle = "#fc3";
     this.lineOfTouchedTiles.map((tile, index) => {
       if (index === 0) {
         c2d.moveTo(
@@ -264,10 +379,44 @@ class App {
           this.GRID_OFFSET_Y + tile.row * this.TILE_SIZE + this.TILE_SIZE / 2,
         );
       }
-    });    
+    });
+    c2d.lineWidth = "8";
+    c2d.lineCap = "round";
+    c2d.lineJoin = "round";
+    c2d.strokeStyle = (this.lineOfTouchedTiles.length < this.MINIMUM_LINE_LENGTH)
+      ? "#999" : "#333";
     c2d.stroke();
-    c2d.closePath();
     //--------------------------------
+  }
+  
+  paint_tiles(grid = []) {
+    let c2d = this.context2d;
+    
+    grid.map((tile) => {
+      if (tile.value === this.TILES.EMPTY) return;  //Don't draw empty tiles.
+      if (tile.row === -1 && !tile.isDropping) return;  //Don't draw the buffer row if it isn't dropping.
+      
+      //If the tile is dropping, it has a y-offset.
+      const offsetY = (tile.isDropping)
+        ? this.dropDistance : 0;
+      
+      c2d.beginPath();
+      c2d.arc(
+        tile.col * this.TILE_SIZE + this.TILE_SIZE / 2 + this.GRID_OFFSET_X,
+        tile.row * this.TILE_SIZE + this.TILE_SIZE / 2 + this.GRID_OFFSET_Y + offsetY,
+        this.TILE_SIZE * 0.4, 0, 2 * Math.PI);
+      c2d.closePath();
+      switch (tile.value) {
+        case this.TILES.RED: c2d.fillStyle = "#c33"; break;
+        case this.TILES.BLUE: c2d.fillStyle = "#39c"; break;
+        case this.TILES.YELLOW: c2d.fillStyle = "#fc3"; break;
+        case this.TILES.GREEN: c2d.fillStyle = "#396"; break;
+        case this.TILES.PINK: c2d.fillStyle = "#f9c"; break;
+        case this.TILES.ORANGE: c2d.fillStyle = "#c93"; break;
+        default: c2d.fillStyle = "#333";
+      }
+      c2d.fill();
+    });
   }
   
   //----------------------------------------------------------------
@@ -323,7 +472,12 @@ class App {
       return null;
     }
     
-    return { col, row };
+    const touchedTile = this.grid.find((tile) => {
+      return (tile.col === col && tile.row === row)
+    });
+    
+    //return { col, row, value };
+    return touchedTile;
   }
   
   //----------------------------------------------------------------
