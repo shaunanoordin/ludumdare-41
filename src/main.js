@@ -19,8 +19,6 @@ const GAME_STATE = {
   BUSY: 'processing_events_and_not_receiving_user_input',
 };
 
-const MINIMUM_LINE_LENGTH = 3;
-
 /*  Primary App Class
  */
 //==============================================================================
@@ -52,7 +50,12 @@ class App {
     this.context2d.imageSmoothingEnabled = false;
     //--------------------------------
     
-    //Initialise Game Objects
+    //Game Constants
+    //--------------------------------
+    this.MINIMUM_LINE_LENGTH = 3;
+    //--------------------------------
+    
+    //Game Objects
     //--------------------------------
     this.assets = {
       images: {}
@@ -60,7 +63,7 @@ class App {
     this.assetsLoaded = 0;
     this.assetsTotal = 0;
     
-    this.TILE = {
+    this.TILES = {
       EMPTY: 0,
       RED: 1,
       BLUE: 2,
@@ -75,7 +78,7 @@ class App {
     this.TILE_SIZE = 64;  //Pixel width and height
     this.GRID_ROWS = 6;
     this.GRID_COLS = 6;
-    this.GRID_OFFSET_X = 64;
+    this.GRID_OFFSET_X = 128;
     this.GRID_OFFSET_Y = 64;
     
     this.grid = [];
@@ -83,7 +86,7 @@ class App {
       for (let col = 0; col < this.GRID_COLS; col++) {
         this.grid.push({
           row, col,
-          value: this.TILE.random()
+          value: this.TILES.random()
         });
       }
     }
@@ -186,11 +189,10 @@ class App {
         if (prevHeadTile && touchedTile.row === prevHeadTile.row && touchedTile.col === prevHeadTile.col) {
           lineOfTouchedTiles.pop();
         }
-        
       }
       
       if (this.pointer.state === APP.INPUT_ENDED || this.pointer.state === APP.INPUT_IDLE) {
-        if (lineOfTouchedTiles >= MINIMUM_LINE_LENGTH) {
+        if (lineOfTouchedTiles.length >= this.MINIMUM_LINE_LENGTH) {
           //SUCCESS
           this.state = GAME_STATE.BUSY;
         } else {
@@ -204,16 +206,25 @@ class App {
       
     } else if (this.state === GAME_STATE.BUSY) {
       
-      //Reset
-      this.lineOfTouchedTiles = [];      
-      this.state = GAME_STATE.READY;
+      console.log('--------');
+      
+      //User has just finished drawing a valid line - process it now.
+      if (this.lineOfTouchedTiles.length > 0) {
+        console.log(this.lineOfTouchedTiles);
+        
+        //Clear the line of touched tiles.
+        this.lineOfTouchedTiles = [];
+        
+      } else {
+        
+        //All done, now let's 
+        this.state = GAME_STATE.READY;
+        
+      }
+      
+      
       
     }
-    
-    
-    
-    
-    
     //--------------------------------
     
     this.paint();
@@ -230,16 +241,6 @@ class App {
     //Paint the grid
     //--------------------------------
     c2d.beginPath();
-    c2d.lineWidth = "2";
-    switch (this.state) {
-      case GAME_STATE.READY: c2d.strokeStyle = "#ccc"; break;
-      case GAME_STATE.ACTIVE:
-        c2d.strokeStyle = (this.lineOfTouchedTiles.length < MINIMUM_LINE_LENGTH)
-          ? "#ffe" : "#ffc";
-        break;
-      case GAME_STATE.BUSY: c2d.strokeStyle = "#c33"; break;
-      default: c2d.strokeStyle = "#333";
-    }
     c2d.rect(0, 0, this.canvasWidth, this.canvasHeight);
     for (let row = 0; row < this.GRID_ROWS; row++) {
       for (let col = 0; col < this.GRID_COLS; col++) {
@@ -250,15 +251,23 @@ class App {
         );
       }
     }
-    c2d.stroke();
     c2d.closePath();
+    c2d.lineWidth = "2";
+    switch (this.state) {
+      case GAME_STATE.READY: c2d.strokeStyle = "#ccc"; break;
+      case GAME_STATE.ACTIVE:
+        c2d.strokeStyle = (this.lineOfTouchedTiles.length < this.MINIMUM_LINE_LENGTH)
+          ? "#ccc" : "#fff";
+        break;
+      case GAME_STATE.BUSY: c2d.strokeStyle = "#333"; break;
+      default: c2d.strokeStyle = "#999";
+    }
+    c2d.stroke();
     //--------------------------------
     
-    //Paint the line of touched tiles
+    //Paint the line of touched tiles (background)
     //--------------------------------
     c2d.beginPath();
-    c2d.fillStyle = (this.lineOfTouchedTiles.length < MINIMUM_LINE_LENGTH)
-      ? "#ffe" : "#ffc";
     this.lineOfTouchedTiles.map((tile) => {
       c2d.rect(
         this.GRID_OFFSET_X + tile.col * this.TILE_SIZE,
@@ -266,16 +275,20 @@ class App {
         this.TILE_SIZE, this.TILE_SIZE
       );
     });    
-    c2d.fill();
     c2d.closePath();
+    c2d.fillStyle = (this.lineOfTouchedTiles.length < this.MINIMUM_LINE_LENGTH)
+      ? "#ccc" : "#fff";
+    c2d.fill();
     //--------------------------------
     
-    //Paint the line of touched tiles
+    //Paint the tiles
+    //--------------------------------
+    this.paint_tiles(this.grid);
+    //--------------------------------
+    
+    //Paint the line of touched tiles (overlay line)
     //--------------------------------
     c2d.beginPath();
-    c2d.lineWidth = "8";
-    c2d.strokeStyle = (this.lineOfTouchedTiles.length < MINIMUM_LINE_LENGTH)
-      ? "#fec" : "#fc9";
     this.lineOfTouchedTiles.map((tile, index) => {
       if (index === 0) {
         c2d.moveTo(
@@ -288,10 +301,37 @@ class App {
           this.GRID_OFFSET_Y + tile.row * this.TILE_SIZE + this.TILE_SIZE / 2,
         );
       }
-    });    
+    });
+    c2d.lineWidth = "8";
+    c2d.lineCap = "round";
+    c2d.lineJoin = "round";
+    c2d.strokeStyle = (this.lineOfTouchedTiles.length < this.MINIMUM_LINE_LENGTH)
+      ? "#999" : "#333";
     c2d.stroke();
-    c2d.closePath();
     //--------------------------------
+  }
+  
+  paint_tiles(grid = []) {
+    let c2d = this.context2d;
+    
+    grid.map((tile) => {
+      c2d.beginPath();
+      c2d.arc(
+        tile.col * this.TILE_SIZE + this.TILE_SIZE / 2 + this.GRID_OFFSET_X,
+        tile.row * this.TILE_SIZE + this.TILE_SIZE / 2 + this.GRID_OFFSET_Y,
+        this.TILE_SIZE * 0.4, 0, 2 * Math.PI);
+      c2d.closePath();
+      switch (tile.value) {
+        case this.TILES.RED: c2d.fillStyle = "#c33"; break;
+        case this.TILES.BLUE: c2d.fillStyle = "#39c"; break;
+        case this.TILES.YELLOW: c2d.fillStyle = "#fc3"; break;
+        case this.TILES.GREEN: c2d.fillStyle = "#396"; break;
+        case this.TILES.PINK: c2d.fillStyle = "#f9c"; break;
+        case this.TILES.ORANGE: c2d.fillStyle = "#c93"; break;
+        default: c2d.fillStyle = "#333";
+      }
+      c2d.fill();
+    });
   }
   
   //----------------------------------------------------------------
@@ -347,7 +387,12 @@ class App {
       return null;
     }
     
-    return { col, row };
+    const touchedTile = this.grid.find((tile) => {
+      return (tile.col === col && tile.row === row)
+    });
+    
+    //return { col, row, value };
+    return touchedTile;
   }
   
   //----------------------------------------------------------------
