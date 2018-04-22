@@ -97,7 +97,7 @@ class App {
     //Tracks when tiles drop.
     this.dropTilesNow = false;
     this.dropDistance = 0;
-    this.dropSpeed = 1;
+    this.dropSpeed = 4;
     //--------------------------------
     
     //Prepare Input
@@ -393,8 +393,10 @@ class App {
     let c2d = this.context2d;
     
     grid.map((tile) => {
-      if (tile.value === this.TILES.EMPTY) return;
+      if (tile.value === this.TILES.EMPTY) return;  //Don't draw empty tiles.
+      if (tile.row === -1 && !tile.isDropping) return;  //Don't draw the buffer row if it isn't dropping.
       
+      //If the tile is dropping, it has a y-offset.
       const offsetY = (tile.isDropping)
         ? this.dropDistance : 0;
       
