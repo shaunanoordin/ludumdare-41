@@ -35,6 +35,7 @@ class App {
     this.html = {
       app: document.getElementById("app"),
       canvas: document.getElementById("canvas"),
+      controls: document.getElementById("controls"),
     };
     this.context2d = this.html.canvas.getContext("2d");
     this.boundingBox = null;  //To be defined by this.updateSize().
@@ -533,24 +534,24 @@ class App {
     
     //Ludum Dare 41
     if (this.config.autoFitEverything) {
+      console.log('+++', this.html.app.dataset);
       const appWidth = parseInt(this.html.app.dataset.width);
       const appHeight = parseInt(this.html.app.dataset.height);
+      const appFontSize = parseInt(this.html.app.dataset.fontSize)
       
       const bestFit = Math.min(
-        //this.html.app.offsetWidth / appWidth,
-        //this.html.app.offsetHeight / appHeight
         window.innerWidth / appWidth,
         window.innerHeight / appHeight
       );
       
-      console.log('bestFit: ', bestFit, appWidth, appHeight);
-      
-      this.html.canvas.style =
-        "width: " + Math.round(bestFit * this.canvasWidth) + "px; " +
-        "height: " + Math.round(bestFit * this.canvasHeight) + "px; ";
       this.html.app.style =
         "width: " + Math.round(bestFit * appWidth) + "px; " +
         "height: " + Math.round(bestFit * appHeight) + "px; ";
+      this.html.canvas.style =
+        "width: " + Math.round(bestFit * this.canvasWidth) + "px; " +
+        "height: " + Math.round(bestFit * this.canvasHeight) + "px; ";
+      this.html.controls.style =
+        "font-size: " + Math.round(bestFit * appFontSize) + "px";
     }
     
     let boundingBox = (this.html.canvas.getBoundingClientRect)
