@@ -29,7 +29,8 @@ class App {
     this.config = {
       framesPerSecond: APP.FRAMES_PER_SECOND,
       debugMode: false,
-      autoFitCanvas: false,
+      autoFitEverything: true, //Ludum Dare 41
+      //autoFitCanvas: false,
     };    
     this.html = {
       app: document.getElementById("app"),
@@ -87,7 +88,7 @@ class App {
     this.TILE_SIZE = 64;  //Pixel width and height
     this.GRID_ROWS = 6;
     this.GRID_COLS = 6;
-    this.GRID_OFFSET_X = 128;
+    this.GRID_OFFSET_X = 0;
     this.GRID_OFFSET_Y = 64;
     
     this.grid = [];
@@ -518,6 +519,7 @@ class App {
   //----------------------------------------------------------------
   
   updateSize() {
+    /*
     if (this.config.autoFitCanvas) {
       const bestFit = Math.min(
         this.html.app.offsetWidth / this.canvasWidth,
@@ -527,6 +529,28 @@ class App {
       this.html.canvas.style =
         "width: " + Math.round(bestFit * this.canvasWidth) + "px; " +
         "height: " + Math.round(bestFit * this.canvasHeight) + "px; ";
+    }*/
+    
+    //Ludum Dare 41
+    if (this.config.autoFitEverything) {
+      const appWidth = parseInt(this.html.app.dataset.width);
+      const appHeight = parseInt(this.html.app.dataset.height);
+      
+      const bestFit = Math.min(
+        //this.html.app.offsetWidth / appWidth,
+        //this.html.app.offsetHeight / appHeight
+        window.innerWidth / appWidth,
+        window.innerHeight / appHeight
+      );
+      
+      console.log('bestFit: ', bestFit, appWidth, appHeight);
+      
+      this.html.canvas.style =
+        "width: " + Math.round(bestFit * this.canvasWidth) + "px; " +
+        "height: " + Math.round(bestFit * this.canvasHeight) + "px; ";
+      this.html.app.style =
+        "width: " + Math.round(bestFit * appWidth) + "px; " +
+        "height: " + Math.round(bestFit * appHeight) + "px; ";
     }
     
     let boundingBox = (this.html.canvas.getBoundingClientRect)
