@@ -234,8 +234,7 @@ class App {
       
       //If user has just finished drawing a valid line - process it now.
       if (lineOfTouchedTiles.length > 0) {
-        //TODO
-        console.log(lineOfTouchedTiles);
+        this.cookIngredients();
         
         //Clear the line of touched tiles.
         const uniqueRows = [];  //The height of the line is used to determine the drop speed.
@@ -342,7 +341,20 @@ class App {
     this.message = message;
     this.messageTimer = this.DEFAULT_MESSAGE_TIME;
   }
-
+  
+  /*  Get all the ingredients in the line of touched tiles, and cook 'em for a
+      score!
+   */
+  cookIngredients() {
+    if (this.lineOfTouchedTiles.length < this.MINIMUM_LINE_LENGTH) return;
+    
+    let score = 0;
+    
+    score = this.lineOfTouchedTiles.length;
+    
+    this.score += score;
+  }
+  
   /*  Adds food orders.
    */
   fillFoodOrders() {
@@ -427,6 +439,17 @@ class App {
     c2d.strokeStyle = (this.lineOfTouchedTiles.length < this.MINIMUM_LINE_LENGTH)
       ? this.COLOURS.HIGHLIGHT_WEAK : this.COLOURS.HIGHLIGHT_STRONG;
     c2d.stroke();
+    //--------------------------------
+    
+    //Show score, or a message if there's one.
+    //--------------------------------
+    if (this.message.length > 0 && this.messageTimer > 0) {
+      this.messageTimer--;
+      this.html.message.innerHTML = this.message;
+      this.message = "";
+    } else {
+      this.html.message.innerHTML = this.score;
+    }
     //--------------------------------
   }
   
