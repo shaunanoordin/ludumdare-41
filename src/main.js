@@ -105,12 +105,12 @@ class App {
       }
     }
     
-    this.lineOfTouchedTiles = [];
+    this.lineOfSelectedTiles = [];
     
     //Tracks when tiles drop.
     this.dropTilesNow = false;
     this.dropDistance = 0;
-    this.dropSpeed = 1;  //Drop speed changes depending on the height of the line of touched tiles.
+    this.dropSpeed = 1;  //Drop speed changes depending on the height of the line of selected tiles.
     this.DROP_SPEED_FACTOR = 4;
     
     this.score = 0;
@@ -174,58 +174,58 @@ class App {
   run() {
     
     //--------------------------------
-    const lineOfTouchedTiles = this.lineOfTouchedTiles;
+    const lineOfSelectedTiles = this.lineOfSelectedTiles;
     
-    //Check if user has touched a tile and is starting to draw a line.
+    //Check if user has touched/clicked on a tile and is starting to draw a line.
     if (this.state === GAME_STATE.READY) {
       
-      //If a tile is touched, start the line drawing!
-      const touchedTile = this.getTouchedTile();
-      if (touchedTile) {  //If there's a touched tile, it implies this.pointer.state === APP.INPUT_ACTIVE.
+      //If a tile is touched/clicked on, start the line drawing!
+      const selectedTile = this.getSelectedTile();
+      if (selectedTile) {  //If there's a touched tile, it implies this.pointer.state === APP.INPUT_ACTIVE.
         this.state = GAME_STATE.ACTIVE;
-        lineOfTouchedTiles.push(touchedTile);
+        lineOfSelectedTiles.push(selectedTile);
       }
       
     } else if (this.state === GAME_STATE.ACTIVE) {
       
-      const touchedTile = this.getTouchedTile();
+      const selectedTile = this.getSelectedTile();
       
       //If a tile is touched, checked if it's a "valid" tile to add to the line of tiles.
       //A tile is valid only if it's not already in the line of tiles, and it's adjacent to the "head" of the line.
-      if (touchedTile && lineOfTouchedTiles.length > 0) {
-        const headTile = lineOfTouchedTiles[lineOfTouchedTiles.length-1];
-        const prevHeadTile = (lineOfTouchedTiles.length > 1)
-          ? lineOfTouchedTiles[lineOfTouchedTiles.length-2] : null;
-        let tileIsValid = !this.lineOfTouchedTiles.find((tile) => {
-          return tile.row === touchedTile.row && tile.col === touchedTile.col
+      if (selectedTile && lineOfSelectedTiles.length > 0) {
+        const headTile = lineOfSelectedTiles[lineOfSelectedTiles.length-1];
+        const prevHeadTile = (lineOfSelectedTiles.length > 1)
+          ? lineOfSelectedTiles[lineOfSelectedTiles.length-2] : null;
+        let tileIsValid = !this.lineOfSelectedTiles.find((tile) => {
+          return tile.row === selectedTile.row && tile.col === selectedTile.col
         });
         
         tileIsValid = tileIsValid && (
-          (headTile.row === touchedTile.row + 1 && headTile.col === touchedTile.col) ||
-          (headTile.row === touchedTile.row - 1 && headTile.col === touchedTile.col) ||
-          (headTile.row === touchedTile.row && headTile.col === touchedTile.col + 1) ||
-          (headTile.row === touchedTile.row && headTile.col === touchedTile.col - 1)
+          (headTile.row === selectedTile.row + 1 && headTile.col === selectedTile.col) ||
+          (headTile.row === selectedTile.row - 1 && headTile.col === selectedTile.col) ||
+          (headTile.row === selectedTile.row && headTile.col === selectedTile.col + 1) ||
+          (headTile.row === selectedTile.row && headTile.col === selectedTile.col - 1)
         );
     
         //If the tile is valid it, add it to the line 
         if (tileIsValid) {
-          lineOfTouchedTiles.push(touchedTile);
+          lineOfSelectedTiles.push(selectedTile);
         }
         
         //Alternatively, the user might be trying to "walk back" the line.
-        if (prevHeadTile && touchedTile.row === prevHeadTile.row && touchedTile.col === prevHeadTile.col) {
-          lineOfTouchedTiles.pop();
+        if (prevHeadTile && selectedTile.row === prevHeadTile.row && selectedTile.col === prevHeadTile.col) {
+          lineOfSelectedTiles.pop();
         }
       }
 
       //If user has stopped drawing a line of tiles, let's process it.      
       if (this.pointer.state === APP.INPUT_ENDED || this.pointer.state === APP.INPUT_IDLE) {
-        if (lineOfTouchedTiles.length >= this.MINIMUM_LINE_LENGTH) {
+        if (lineOfSelectedTiles.length >= this.MINIMUM_LINE_LENGTH) {
           //OK, there's a valid line. Pass it to the "busy state" logic to process it.
           this.state = GAME_STATE.BUSY;
         } else {
           //If there's no valid line, just reset the input.
-          this.lineOfTouchedTiles = [];      
+          this.lineOfSelectedTiles = [];      
           this.state = GAME_STATE.READY;
         }
       }
@@ -233,22 +233,22 @@ class App {
     } else if (this.state === GAME_STATE.BUSY) {
       
       //If user has just finished drawing a valid line - process it now.
-      if (lineOfTouchedTiles.length > 0) {
-        this.cookIngredients();
+      if (lineOfSelectedTiles.length > 0) {
+        this.scoreSelectedTiles();
         
-        //Clear the line of touched tiles.
+        //Clear the line of selected tiles.
         const uniqueRows = [];  //The height of the line is used to determine the drop speed.
-        lineOfTouchedTiles.map((touchedTile) => {
+        lineOfSelectedTiles.map((selectedTile) => {
           this.grid.map((tile) => {
-            if (tile.row === touchedTile.row && tile.col === touchedTile.col) {
-              //If it's a touched tile, empty it. The this.dropTiles() will later do the dropping.
+            if (tile.row === selectedTile.row && tile.col === selectedTile.col) {
+              //If it's a selected tile, empty it. The this.dropTiles() will later do the dropping.
               tile.value = this.TILES.EMPTY;
               //Keep track of the height of the line.
               if (!uniqueRows.includes(tile.row)) { uniqueRows.push(tile.row); }
             }
           });
         });
-        this.lineOfTouchedTiles = [];
+        this.lineOfSelectedTiles = [];
         this.dropSpeed = Math.max(1, Math.sqrt(uniqueRows.length)) * this.DROP_SPEED_FACTOR;
       }
       
@@ -342,15 +342,15 @@ class App {
     this.messageTimer = this.DEFAULT_MESSAGE_TIME;
   }
   
-  /*  Get all the ingredients in the line of touched tiles, and cook 'em for a
+  /*  Get all the ingredients in the line of selected tiles, and cook 'em for a
       score!
    */
-  cookIngredients() {
-    if (this.lineOfTouchedTiles.length < this.MINIMUM_LINE_LENGTH) return;
+  scoreSelectedTiles() {
+    if (this.lineOfSelectedTiles.length < this.MINIMUM_LINE_LENGTH) return;
     
     let score = 0;
     
-    score = this.lineOfTouchedTiles.length;
+    score = this.lineOfSelectedTiles.length;
     
     this.score += score;
   }
@@ -387,7 +387,7 @@ class App {
     switch (this.state) {
       case GAME_STATE.READY: c2d.strokeStyle = this.COLOURS.READY; break;
       case GAME_STATE.ACTIVE:
-        c2d.strokeStyle = (this.lineOfTouchedTiles.length < this.MINIMUM_LINE_LENGTH)
+        c2d.strokeStyle = (this.lineOfSelectedTiles.length < this.MINIMUM_LINE_LENGTH)
           ? this.COLOURS.ACTIVE : this.COLOURS.ACTIVE_STRONG;
         break;
       case GAME_STATE.BUSY: c2d.strokeStyle = this.COLOURS.BUSY; break;
@@ -396,10 +396,10 @@ class App {
     c2d.stroke();
     //--------------------------------
     
-    //Paint the line of touched tiles (background)
+    //Paint the line of selected tiles (background)
     //--------------------------------
     c2d.beginPath();
-    this.lineOfTouchedTiles.map((tile) => {
+    this.lineOfSelectedTiles.map((tile) => {
       c2d.rect(
         this.GRID_OFFSET_X + tile.col * this.TILE_SIZE,
         this.GRID_OFFSET_Y + tile.row * this.TILE_SIZE,
@@ -407,7 +407,7 @@ class App {
       );
     });    
     c2d.closePath();
-    c2d.fillStyle = (this.lineOfTouchedTiles.length < this.MINIMUM_LINE_LENGTH)
+    c2d.fillStyle = (this.lineOfSelectedTiles.length < this.MINIMUM_LINE_LENGTH)
       ? this.COLOURS.ACTIVE : this.COLOURS.ACTIVE_STRONG;
     c2d.fill();
     //--------------------------------
@@ -417,10 +417,10 @@ class App {
     this.paint_tiles(this.grid);
     //--------------------------------
     
-    //Paint the line of touched tiles (overlay line)
+    //Paint the line of selected tiles (overlay line)
     //--------------------------------
     c2d.beginPath();
-    this.lineOfTouchedTiles.map((tile, index) => {
+    this.lineOfSelectedTiles.map((tile, index) => {
       if (index === 0) {
         c2d.moveTo(
           this.GRID_OFFSET_X + tile.col * this.TILE_SIZE + this.TILE_SIZE / 2,
@@ -436,7 +436,7 @@ class App {
     c2d.lineWidth = "8";
     c2d.lineCap = "round";
     c2d.lineJoin = "round";
-    c2d.strokeStyle = (this.lineOfTouchedTiles.length < this.MINIMUM_LINE_LENGTH)
+    c2d.strokeStyle = (this.lineOfSelectedTiles.length < this.MINIMUM_LINE_LENGTH)
       ? this.COLOURS.HIGHLIGHT_WEAK : this.COLOURS.HIGHLIGHT_STRONG;
     c2d.stroke();
     //--------------------------------
@@ -524,8 +524,8 @@ class App {
   
   //----------------------------------------------------------------
 
-  getTouchedTile() {
-    //Sanity check: can't get the touched tile if nothing is touched.
+  getSelectedTile() {
+    //Sanity check: can't get the selected tile if nothing is touched/clicked on.
     if (this.pointer.state !== APP.INPUT_ACTIVE) return null;
 
     const col = Math.floor((this.pointer.now.x - this.GRID_OFFSET_X) / this.TILE_SIZE);
@@ -536,12 +536,12 @@ class App {
       return null;
     }
     
-    const touchedTile = this.grid.find((tile) => {
+    const selectedTile = this.grid.find((tile) => {
       return (tile.col === col && tile.row === row)
     });
     
     //return { col, row, value };
-    return touchedTile;
+    return selectedTile;
   }
   
   //----------------------------------------------------------------
@@ -578,7 +578,6 @@ class App {
     
     //Ludum Dare 41
     if (this.config.autoFitEverything) {
-      console.log('+++', this.html.app.dataset);
       const appWidth = parseInt(this.html.app.dataset.width);
       const appHeight = parseInt(this.html.app.dataset.height);
       const appFontSize = parseInt(this.html.app.dataset.fontSize)

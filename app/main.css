@@ -32,6 +32,7 @@ body {
   display: block;
   margin: 0 auto;
   touch-action: none;
+  cursor: pointer;
 }
 #app #controls {
   flex: 1 1 auto;
