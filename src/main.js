@@ -204,6 +204,7 @@ class App {
     c2d.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
     
     //Paint the grid
+    //--------------------------------
     c2d.beginPath();
     c2d.lineWidth = "2";
     c2d.strokeStyle = "#ccc";
@@ -219,6 +220,45 @@ class App {
     }
     c2d.stroke();
     c2d.closePath();
+    //--------------------------------
+    
+    
+    //Paint the line of touched tiles
+    //--------------------------------
+    c2d.beginPath();
+    c2d.fillStyle = "#ffc";
+    this.lineOfTouchedTiles.map((tile) => {
+      c2d.rect(
+        this.GRID_OFFSET_X + tile.col * this.TILE_SIZE,
+        this.GRID_OFFSET_Y + tile.row * this.TILE_SIZE,
+        this.TILE_SIZE, this.TILE_SIZE
+      );
+    });    
+    c2d.fill();
+    c2d.closePath();
+    //--------------------------------
+    
+    //Paint the line of touched tiles
+    //--------------------------------
+    c2d.beginPath();
+    c2d.lineWidth = "8";
+    c2d.strokeStyle = "#fc3";
+    this.lineOfTouchedTiles.map((tile, index) => {
+      if (index === 0) {
+        c2d.moveTo(
+          this.GRID_OFFSET_X + tile.col * this.TILE_SIZE + this.TILE_SIZE / 2,
+          this.GRID_OFFSET_Y + tile.row * this.TILE_SIZE + this.TILE_SIZE / 2,
+        );
+      } else {
+        c2d.lineTo(
+          this.GRID_OFFSET_X + tile.col * this.TILE_SIZE + this.TILE_SIZE / 2,
+          this.GRID_OFFSET_Y + tile.row * this.TILE_SIZE + this.TILE_SIZE / 2,
+        );
+      }
+    });    
+    c2d.stroke();
+    c2d.closePath();
+    //--------------------------------
   }
   
   //----------------------------------------------------------------
