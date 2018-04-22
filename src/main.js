@@ -352,6 +352,8 @@ class App {
     
     score = this.lineOfSelectedTiles.length;
     
+    this.addMessage("You've scored " + score + " points!");
+    
     this.score += score;
   }
   
@@ -446,7 +448,7 @@ class App {
     if (this.message.length > 0 && this.messageTimer > 0) {
       this.messageTimer--;
       this.html.message.innerHTML = this.message;
-      this.message = "";
+      if (this.messageTimer === 0) this.message = "";
     } else {
       this.html.message.innerHTML = this.score;
     }
