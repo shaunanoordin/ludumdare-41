@@ -19,6 +19,8 @@ const GAME_STATE = {
   BUSY: 'processing_events_and_not_receiving_user_input',
 };
 
+const MINIMUM_LINE_LENGTH = 3;
+
 /*  Primary App Class
  */
 //==============================================================================
@@ -162,6 +164,8 @@ class App {
       //A tile is valid only if it's not already in the line of tiles, and it's adjacent to the "head" of the line.
       if (touchedTile && lineOfTouchedTiles.length > 0) {
         const headTile = lineOfTouchedTiles[lineOfTouchedTiles.length-1];
+        const prevHeadTile = (lineOfTouchedTiles.length > 1)
+          ? lineOfTouchedTiles[lineOfTouchedTiles.length-2] : null;
         let tileIsValid = !this.lineOfTouchedTiles.find((tile) => {
           return tile.row === touchedTile.row && tile.col === touchedTile.col
         });
@@ -172,14 +176,30 @@ class App {
           (headTile.row === touchedTile.row && headTile.col === touchedTile.col + 1) ||
           (headTile.row === touchedTile.row && headTile.col === touchedTile.col - 1)
         );
-        
+    
+        //If the tile is valid it, add it to the line 
         if (tileIsValid) {
           lineOfTouchedTiles.push(touchedTile);
         }
+        
+        //Alternatively, the user might be trying to "walk back" the line.
+        if (prevHeadTile && touchedTile.row === prevHeadTile.row && touchedTile.col === prevHeadTile.col) {
+          lineOfTouchedTiles.pop();
+        }
+        
       }
       
       if (this.pointer.state === APP.INPUT_ENDED || this.pointer.state === APP.INPUT_IDLE) {
-        this.state = GAME_STATE.BUSY;
+        if (lineOfTouchedTiles >= MINIMUM_LINE_LENGTH) {
+          //SUCCESS
+          this.state = GAME_STATE.BUSY;
+        } else {
+          //DON'T DO ANYTHING
+          
+          //Reset
+          this.lineOfTouchedTiles = [];      
+          this.state = GAME_STATE.READY;
+        }
       }
       
     } else if (this.state === GAME_STATE.BUSY) {
@@ -213,7 +233,10 @@ class App {
     c2d.lineWidth = "2";
     switch (this.state) {
       case GAME_STATE.READY: c2d.strokeStyle = "#ccc"; break;
-      case GAME_STATE.ACTIVE: c2d.strokeStyle = "#ff9"; break;
+      case GAME_STATE.ACTIVE:
+        c2d.strokeStyle = (this.lineOfTouchedTiles.length < MINIMUM_LINE_LENGTH)
+          ? "#ffe" : "#ffc";
+        break;
       case GAME_STATE.BUSY: c2d.strokeStyle = "#c33"; break;
       default: c2d.strokeStyle = "#333";
     }
@@ -231,11 +254,11 @@ class App {
     c2d.closePath();
     //--------------------------------
     
-    
     //Paint the line of touched tiles
     //--------------------------------
     c2d.beginPath();
-    c2d.fillStyle = "#ffc";
+    c2d.fillStyle = (this.lineOfTouchedTiles.length < MINIMUM_LINE_LENGTH)
+      ? "#ffe" : "#ffc";
     this.lineOfTouchedTiles.map((tile) => {
       c2d.rect(
         this.GRID_OFFSET_X + tile.col * this.TILE_SIZE,
@@ -251,7 +274,8 @@ class App {
     //--------------------------------
     c2d.beginPath();
     c2d.lineWidth = "8";
-    c2d.strokeStyle = "#fc3";
+    c2d.strokeStyle = (this.lineOfTouchedTiles.length < MINIMUM_LINE_LENGTH)
+      ? "#fec" : "#fc9";
     this.lineOfTouchedTiles.map((tile, index) => {
       if (index === 0) {
         c2d.moveTo(
