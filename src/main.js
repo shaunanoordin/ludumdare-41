@@ -298,7 +298,7 @@ class App {
       const tileBelow = this.grid.find((tb) => {
         return tb.row === tile.row + 1 && tb.col === tile.col;
       });
-      if (tileBelow && tileBelow.value === this.TILES.EMPTY) {
+    if (tileBelow && (tileBelow.value === this.TILES.EMPTY || tileBelow.isDropping)) {
         tile.isDropping = true;
         this.dropTilesNow = true;
         doneDropping = false;  //Gotta keep dropping!
@@ -395,10 +395,13 @@ class App {
     grid.map((tile) => {
       if (tile.value === this.TILES.EMPTY) return;
       
+      const offsetY = (tile.isDropping)
+        ? this.dropDistance : 0;
+      
       c2d.beginPath();
       c2d.arc(
         tile.col * this.TILE_SIZE + this.TILE_SIZE / 2 + this.GRID_OFFSET_X,
-        tile.row * this.TILE_SIZE + this.TILE_SIZE / 2 + this.GRID_OFFSET_Y,
+        tile.row * this.TILE_SIZE + this.TILE_SIZE / 2 + this.GRID_OFFSET_Y + offsetY,
         this.TILE_SIZE * 0.4, 0, 2 * Math.PI);
       c2d.closePath();
       switch (tile.value) {
