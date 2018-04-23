@@ -11,9 +11,10 @@ Genres.
  */
 
 import * as APP from "./constants.js";  //Naming note: all caps.
-import { Utility } from "./utility.js";
+import { Utility, ImageAsset } from "./utility.js";
 
 const GAME_STATE = {
+  STARTING: "loading_resources_and_getting_ready_to_start",
   READY: "ready_and_waiting_for_user_input",
   ACTIVE: "active_and_receiving_user_input",
   BUSY: "processing_events_and_not_receiving_user_input",
@@ -44,7 +45,7 @@ class App {
     this.canvasSizeRatio = 1;
     this.canvasWidth = this.html.canvas.width;  //The intended width/height of the canvas.
     this.canvasHeight = this.html.canvas.height;
-    this.state = GAME_STATE.READY;
+    this.state = GAME_STATE.STARTING;
     //--------------------------------
     
     //Account for graphical settings
@@ -75,6 +76,8 @@ class App {
     };
     this.assetsLoaded = 0;
     this.assetsTotal = 0;
+    
+    this.assets.images.ingredients = new ImageAsset("assets/ingredients.png");
     
     this.TILES = {
       EMPTY: 0,
@@ -180,8 +183,25 @@ class App {
     //--------------------------------
     const lineOfSelectedTiles = this.lineOfSelectedTiles;
     
+    //Check if all assets are ready.
+    if (this.state === GAME_STATE.STARTING) {
+      this.assetsLoaded = 0;
+      this.assetsTotal = 0;
+      for (let category in this.assets) {
+        for (let asset in this.assets[category]) {
+          this.assetsTotal++;
+          if (this.assets[category][asset].loaded) this.assetsLoaded++;
+        }
+      }
+      if (this.assetsLoaded < this.assetsTotal) {
+        this.html.message.textContent = "Starting...";
+        return;
+      }
+      
+      this.state = GAME_STATE.READY;
+
     //Check if user has touched/clicked on a tile and is starting to draw a line.
-    if (this.state === GAME_STATE.READY) {
+    } else if (this.state === GAME_STATE.READY) {
       
       //If a tile is touched/clicked on, start the line drawing!
       const selectedTile = this.getSelectedTile();
@@ -425,7 +445,7 @@ class App {
         if (!ingredients.includes(ingval)) ingredients.push(ingval);
       }
       
-      let newFoodOrder = { ingredients };
+      let newFoodOrder = { ingredients: ingredients.sort() };
       this.foodOrders.push(newFoodOrder);
     }
     
@@ -550,7 +570,7 @@ class App {
       c2d.arc(
         tile.col * this.TILE_SIZE + this.TILE_SIZE / 2 + this.GRID_OFFSET_X,
         tile.row * this.TILE_SIZE + this.TILE_SIZE / 2 + this.GRID_OFFSET_Y + offsetY,
-        this.TILE_SIZE * 0.4, 0, 2 * Math.PI);
+        this.TILE_SIZE * 0.1, 0, 2 * Math.PI);
       c2d.closePath();
       switch (tile.value) {
         case this.TILES.RED: c2d.fillStyle = "#c33"; break;
@@ -562,6 +582,20 @@ class App {
         default: c2d.fillStyle = "#333";
       }
       c2d.fill();
+      
+      
+      //Paint the tiles
+      const PNG_TILE_SIZE = 32;
+      const srcX = tile.value * PNG_TILE_SIZE;
+      const srcY = 0;
+      const srcW = PNG_TILE_SIZE;
+      const srcH = PNG_TILE_SIZE;
+      const tgtX = tile.col * this.TILE_SIZE + this.GRID_OFFSET_X;
+      const tgtY = tile.row * this.TILE_SIZE + this.GRID_OFFSET_Y + offsetY;
+      const tgtW = this.TILE_SIZE;
+      const tgtH = this.TILE_SIZE;
+      
+      c2d.drawImage(this.assets.images.ingredients.img, srcX, srcY, srcW, srcH, tgtX, tgtY, tgtW, tgtH);
     });
   }
   
