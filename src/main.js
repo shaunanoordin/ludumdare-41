@@ -119,6 +119,8 @@ class App {
     this.DEFAULT_MESSAGE_TIME = 2 * APP.FRAMES_PER_SECOND;
     this.FOOD_ORDER_COUNT = 3;
     this.INGREDIENTS_PER_ORDER = 3;
+    this.BAD_ORDER_PENALTY = 3;  //If player creates a dish nobody asked for, add a penalty.
+    this.MAKE_SCORE_LOOK_BIG_FACTOR = 100;
     this.foodOrders = [];
     this.fillFoodOrders();
     //--------------------------------
@@ -361,8 +363,6 @@ class App {
       }
     });
     
-    console.log('Unique Ingredients: ', uniqueIngredients);
-    
     //For each available food order, check if the unique ingredients match all
     //the ingredients of the food order.
     let score = 0;
@@ -386,23 +386,33 @@ class App {
           uniqueIngredients[ingval] > 0
       });
       
-      console.log('+++ ', selectedIngredientsOK, foodOrderIngredientsOK);
       const selectedIngredientsMatchOrder = selectedIngredientsOK && foodOrderIngredientsOK;
       
       //If we get a match, increase the score and remove the food order from the list.
       if (selectedIngredientsMatchOrder) {
+        score += this.lineOfSelectedTiles.length;
         return false;  //Remove from the list.
       } else {
         return true;  //Keep the food order on the list.
       }
     });
     
-    
-    
-    this.fillFoodOrders();
-    
-    this.addMessage("+" + score + " points!");
+    //Update the score!
+    //If the user made any sort of good match - matching selected ingredients
+    //to any food order's ingredients - add to the score.
+    //If the user selected ingredients and cooked a meal that nobody wanted, add
+    //a penalty to the score.
+    score *= this.MAKE_SCORE_LOOK_BIG_FACTOR;
+    if (score > 0) {
+      this.addMessage("+" + score + " points!");
+    } else {
+      score = this.lineOfSelectedTiles.length * -this.BAD_ORDER_PENALTY * this.MAKE_SCORE_LOOK_BIG_FACTOR;
+      this.addMessage("Bad recipe! " + score + " points...");
+    }
     this.score += score;
+    
+    //OK, if there are any empty slots for new food orders, let's fill 'em up!
+    this.fillFoodOrders();
   }
   
   /*  Adds food orders.
