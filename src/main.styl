@@ -1,4 +1,5 @@
 dark-colour = #333
+mid-colour = #999
 light-colour = #fff
 primary-colour = #c33
 highlight-colour = #f33
@@ -11,6 +12,7 @@ highlight-colour = #f33
   font-size: 16px
   background: dark-colour url("../assets/simple-bg.png")
   color: dark-colour
+  touch-action: none  //Prevent touch input outside the #app from triggering standard scroll/navigate actions.
 
 html
 body
@@ -18,13 +20,68 @@ body
   margin: 0
   width: 100%
   height: 100%
+  display: flex
+  flex-direction: column
+  justify-content: center
+  align-items: center
 
 #app
   width: 100%
   height: 100%
   overflow: hidden
+  flex: 0 0 auto
+  display: flex
+  flex-direction: column
 
   #canvas
+    flex: 0 0 auto
     display: block
     margin: 0 auto
     touch-action: none  //Prevents IE/Edge from intrepreting touch input as scroll/pan commands.
+    cursor: pointer
+    
+  #controls
+    flex: 1 1 auto
+    background: light-colour
+    overflow: auto
+    touch-action: pan-y  //Allow standard "scrolling" touch input for this element.
+
+    #message
+      text-align: center
+      padding: 0.5em
+    
+    #orders
+      text-align: center
+      list-style: none
+      padding: 0
+      margin: 0
+      
+      li
+        padding: 0.5em 0
+        margin: 0
+        border-top: 1px solid mid-colour
+      
+        .ingredient
+          display: inline-block
+          margin: 0 0.2em
+          width: 2em
+          height: 2em
+          border: 1px solid dark-colour
+          
+        .ingredient-1
+          background: #c33
+        
+        .ingredient-2
+          background: #39c
+        
+        .ingredient-3
+          background: #fc3
+        
+        .ingredient-4
+          background: #396
+        
+        .ingredient-5
+          background: #f9c
+        
+        .ingredient-6
+          background: #c93
