@@ -349,13 +349,59 @@ class App {
    */
   scoreSelectedTiles() {
     if (this.lineOfSelectedTiles.length < this.MINIMUM_LINE_LENGTH) return;
+  
+    //First figure out the unique ingredients from the line of selected tiles.
+    const uniqueIngredients = {};
+    this.lineOfSelectedTiles.map((tile) => {
+      const ingval = tile.value.toString();
+      if (!uniqueIngredients[ingval]) {
+        uniqueIngredients[ingval] = 1;
+      } else {
+        uniqueIngredients[ingval]++;
+      }
+    });
     
+    console.log('Unique Ingredients: ', uniqueIngredients);
+    
+    //For each available food order, check if the unique ingredients match all
+    //the ingredients of the food order.
     let score = 0;
+    this.foodOrders = this.foodOrders.filter((foodOrder) => {
+
+      //Check 1: does each (unique) selected ingredient have a corresponding
+      //ingredient in the food order recipe?
+      let selectedIngredientsOK = true;
+      Object.keys(uniqueIngredients).map((ingval) => {
+        selectedIngredientsOK =
+          selectedIngredientsOK &&
+          foodOrder.ingredients.includes(ingval);
+      });
+      
+      //Check 2: does each ingredient in the food order recipe appear in the
+      //list of selected ingredients?
+      let foodOrderIngredientsOK = true;
+      foodOrder.ingredients.map((ingval) => {
+        foodOrderIngredientsOK =
+          foodOrderIngredientsOK &&
+          uniqueIngredients[ingval] > 0
+      });
+      
+      console.log('+++ ', selectedIngredientsOK, foodOrderIngredientsOK);
+      const selectedIngredientsMatchOrder = selectedIngredientsOK && foodOrderIngredientsOK;
+      
+      //If we get a match, increase the score and remove the food order from the list.
+      if (selectedIngredientsMatchOrder) {
+        return false;  //Remove from the list.
+      } else {
+        return true;  //Keep the food order on the list.
+      }
+    });
     
-    score = this.lineOfSelectedTiles.length;
+    
+    
+    this.fillFoodOrders();
     
     this.addMessage("+" + score + " points!");
-    
     this.score += score;
   }
   
@@ -365,8 +411,8 @@ class App {
     while (this.foodOrders.length < this.FOOD_ORDER_COUNT) {
       const ingredients = [];
       while (ingredients.length < this.INGREDIENTS_PER_ORDER) {
-        const newIngredient = this.TILES.random();
-        if (!ingredients.includes(newIngredient)) ingredients.push(newIngredient);
+        const ingval = this.TILES.random().toString();
+        if (!ingredients.includes(ingval)) ingredients.push(ingval);
       }
       
       let newFoodOrder = { ingredients };
@@ -377,9 +423,9 @@ class App {
     while (this.html.orders.firstChild) this.html.orders.removeChild(this.html.orders.firstChild);
     this.foodOrders.map((foodOrder) => {
       const htmlFoodOrder = document.createElement("li");
-      foodOrder.ingredients.map((ingredient) => {
+      foodOrder.ingredients.map((ingval) => {
         const htmlIngredient = document.createElement("span");
-        htmlIngredient.className = "ingredient ingredient-" + ingredient;
+        htmlIngredient.className = "ingredient ingredient-" + ingval;
         htmlFoodOrder.appendChild(htmlIngredient);
       });
       
