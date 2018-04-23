@@ -14,9 +14,9 @@ import * as APP from "./constants.js";  //Naming note: all caps.
 import { Utility } from "./utility.js";
 
 const GAME_STATE = {
-  READY: 'ready_and_waiting_for_user_input',
-  ACTIVE: 'active_and_receiving_user_input',
-  BUSY: 'processing_events_and_not_receiving_user_input',
+  READY: "ready_and_waiting_for_user_input",
+  ACTIVE: "active_and_receiving_user_input",
+  BUSY: "processing_events_and_not_receiving_user_input",
 };
 
 /*  Primary App Class
@@ -37,7 +37,7 @@ class App {
       canvas: document.getElementById("canvas"),
       controls: document.getElementById("controls"),
       message: document.getElementById("message"),
-      controls: document.getElementById("controls"),
+      orders: document.getElementById("orders"),
     };
     this.context2d = this.html.canvas.getContext("2d");
     this.boundingBox = null;  //To be defined by this.updateSize().
@@ -117,6 +117,8 @@ class App {
     this.message = "";
     this.messageTimer = 0;
     this.DEFAULT_MESSAGE_TIME = 2 * APP.FRAMES_PER_SECOND;
+    this.FOOD_ORDER_COUNT = 3;
+    this.INGREDIENTS_PER_ORDER = 3;
     this.foodOrders = [];
     this.fillFoodOrders();
     //--------------------------------
@@ -268,7 +270,7 @@ class App {
   //----------------------------------------------------------------
   
   /*  Drops all tiles.
-      Returns true if there's nothign else to drop, false otherwise.
+      Returns true if there's nothing else to drop, false otherwise.
    */
   dropTiles() {
     //If we're in drop mode, drop every falling tile by the drop speed.
@@ -352,7 +354,7 @@ class App {
     
     score = this.lineOfSelectedTiles.length;
     
-    this.addMessage("You've scored " + score + " points!");
+    this.addMessage("+" + score + " points!");
     
     this.score += score;
   }
@@ -360,7 +362,29 @@ class App {
   /*  Adds food orders.
    */
   fillFoodOrders() {
+    while (this.foodOrders.length < this.FOOD_ORDER_COUNT) {
+      const ingredients = [];
+      while (ingredients.length < this.INGREDIENTS_PER_ORDER) {
+        const newIngredient = this.TILES.random();
+        if (!ingredients.includes(newIngredient)) ingredients.push(newIngredient);
+      }
+      
+      let newFoodOrder = { ingredients };
+      this.foodOrders.push(newFoodOrder);
+    }
     
+    //Reset displayed orders, then fill it up again.
+    while (this.html.orders.firstChild) this.html.orders.removeChild(this.html.orders.firstChild);
+    this.foodOrders.map((foodOrder) => {
+      const htmlFoodOrder = document.createElement("li");
+      foodOrder.ingredients.map((ingredient) => {
+        const htmlIngredient = document.createElement("span");
+        htmlIngredient.className = "ingredient ingredient-" + ingredient;
+        htmlFoodOrder.appendChild(htmlIngredient);
+      });
+      
+      this.html.orders.appendChild(htmlFoodOrder);
+    });
   }
   
   //----------------------------------------------------------------
@@ -447,10 +471,10 @@ class App {
     //--------------------------------
     if (this.message.length > 0 && this.messageTimer > 0) {
       this.messageTimer--;
-      this.html.message.innerHTML = this.message;
+      this.html.message.textContent = this.message;
       if (this.messageTimer === 0) this.message = "";
     } else {
-      this.html.message.innerHTML = this.score;
+      this.html.message.textContent = this.score;
     }
     //--------------------------------
   }
