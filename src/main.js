@@ -570,7 +570,7 @@ class App {
       c2d.arc(
         tile.col * this.TILE_SIZE + this.TILE_SIZE / 2 + this.GRID_OFFSET_X,
         tile.row * this.TILE_SIZE + this.TILE_SIZE / 2 + this.GRID_OFFSET_Y + offsetY,
-        this.TILE_SIZE * 0.4, 0, 2 * Math.PI);
+        this.TILE_SIZE * 0.1, 0, 2 * Math.PI);
       c2d.closePath();
       switch (tile.value) {
         case this.TILES.RED: c2d.fillStyle = "#c33"; break;
