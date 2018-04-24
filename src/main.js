@@ -123,6 +123,8 @@ class App {
     this.DROP_SPEED_FACTOR = 4;
     
     this.score = 0;
+    this.MAX_TURNS = 20;
+    this.turnsLeft = this.MAX_TURNS;
     this.message = "";
     this.messageTimer = 0;
     this.DEFAULT_MESSAGE_TIME = 2 * APP.FRAMES_PER_SECOND;
@@ -193,12 +195,25 @@ class App {
         break;
       case GAME_STATE.START_MENU:
         this.html.modal.className = "show ";
+        this.html.modalTitle.textContent = "Ludum Dare 41 - Puzzle Chef!";
+        this.html.modalContent.textContent = "Draw a line through the grid of ingredients to match the orders below. Be sure not to mix up ingredients that nobody asked for!";
+        this.html.modalContinue.textContent = "START!";
         this.html.modalContinue.onclick = () => {
+          this.score = 0;
+          this.turnsLeft = this.MAX_TURNS;
           this.setState(GAME_STATE.READY);
         };
         break;
       case GAME_STATE.END_MENU:
         this.html.modal.className = "show ";
+        this.html.modalTitle.textContent = "Cooking time over!";
+        this.html.modalContent.textContent = "You scored " + score + " points!";
+        this.html.modalContinue.textContent = "Try again?";
+        this.html.modalContinue.onclick = () => {
+          this.score = 0;
+          this.turnsLeft = this.MAX_TURNS;
+          this.setState(GAME_STATE.READY);
+        };
         break;
       default:
         break;   
@@ -578,7 +593,7 @@ class App {
       this.html.message.textContent = this.message;
       if (this.messageTimer === 0) this.message = "";
     } else {
-      this.html.message.textContent = this.score;
+      this.html.message.textContent = "" + this.score + " points | " + this.turnsLeft + " turns remaining";
     }
     //--------------------------------
   }
