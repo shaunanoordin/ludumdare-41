@@ -14,10 +14,12 @@ import * as APP from "./constants.js";  //Naming note: all caps.
 import { Utility, ImageAsset } from "./utility.js";
 
 const GAME_STATE = {
-  STARTING: "loading_resources_and_getting_ready_to_start",
+  INIT: "loading_resources_and_getting_ready_to_start",
+  START_MENU: "start_menu_showing",
   READY: "ready_and_waiting_for_user_input",
   ACTIVE: "active_and_receiving_user_input",
   BUSY: "processing_events_and_not_receiving_user_input",
+  END_MENU: "end_menu_showing",
 };
 
 /*  Primary App Class
@@ -39,13 +41,17 @@ class App {
       controls: document.getElementById("controls"),
       message: document.getElementById("message"),
       orders: document.getElementById("orders"),
+      modal: document.getElementById("modal"),
+      modalTitle: document.getElementById("modal-title"),
+      modalContent: document.getElementById("modal-content"),
+      modalContinue: document.getElementById("modal-continue"),
     };
     this.context2d = this.html.canvas.getContext("2d");
     this.boundingBox = null;  //To be defined by this.updateSize().
     this.canvasSizeRatio = 1;
     this.canvasWidth = this.html.canvas.width;  //The intended width/height of the canvas.
     this.canvasHeight = this.html.canvas.height;
-    this.state = GAME_STATE.STARTING;
+    this.state = GAME_STATE.INIT;
     //--------------------------------
     
     //Account for graphical settings
@@ -117,6 +123,8 @@ class App {
     this.DROP_SPEED_FACTOR = 4;
     
     this.score = 0;
+    this.MAX_TURNS = 20;
+    this.turnsLeft = this.MAX_TURNS;
     this.message = "";
     this.messageTimer = 0;
     this.DEFAULT_MESSAGE_TIME = 2 * APP.FRAMES_PER_SECOND;
@@ -178,13 +186,67 @@ class App {
   
   //----------------------------------------------------------------
   
+  startFreshGame() {
+    this.foodOrders = [];
+    this.fillFoodOrders();
+    
+    this.grid = [];
+    for (let row = -1; row < this.GRID_ROWS; row++) {
+      for (let col = 0; col < this.GRID_COLS; col++) {
+        this.grid.push({
+          row, col,
+          value: this.TILES.random(),
+          isDropping: false,
+        });
+      }
+    }
+    
+    this.lineOfSelectedTiles = [];
+    
+    this.score = 0;
+    this.turnsLeft = this.MAX_TURNS;
+    
+    this.setState(GAME_STATE.READY);
+  }
+  
+  setState(state) {
+    switch (state) {
+      case GAME_STATE.READY:
+      case GAME_STATE.ACTIVE:
+      case GAME_STATE.BUSY:
+        this.html.modal.className = "";
+        break;
+      case GAME_STATE.START_MENU:
+        this.html.modal.className = "show ";
+        this.html.modalTitle.textContent = "Ludum Dare 41 - Puzzle Chef!";
+        this.html.modalContent.textContent = "Draw a line through the grid of ingredients to match any one of the orders below. However, be sure not to mix in ingredients that nobody asked for!";
+        this.html.modalContinue.textContent = "START!";
+        this.html.modalContinue.onclick = () => {
+          this.startFreshGame();
+        };
+        break;
+      case GAME_STATE.END_MENU:
+        this.html.modal.className = "show ";
+        this.html.modalTitle.textContent = "Cooking time over!";
+        this.html.modalContent.textContent = "You scored " + this.score + " points!";
+        this.html.modalContinue.textContent = "Try again?";
+        this.html.modalContinue.onclick = () => {
+          this.startFreshGame();
+        };
+        break;
+      default:
+        break;   
+    }
+    this.state = state;
+  }
+  
   run() {
     
     //--------------------------------
     const lineOfSelectedTiles = this.lineOfSelectedTiles;
     
     //Check if all assets are ready.
-    if (this.state === GAME_STATE.STARTING) {
+    if (this.state === GAME_STATE.INIT) {
       this.assetsLoaded = 0;
       this.assetsTotal = 0;
       for (let category in this.assets) {
@@ -198,7 +260,7 @@ class App {
         return;
       }
       
-      this.state = GAME_STATE.READY;
+      this.setState(GAME_STATE.START_MENU);
 
     //Check if user has touched/clicked on a tile and is starting to draw a line.
     } else if (this.state === GAME_STATE.READY) {
@@ -206,7 +268,7 @@ class App {
       //If a tile is touched/clicked on, start the line drawing!
       const selectedTile = this.getSelectedTile();
       if (selectedTile) {  //If there's a touched tile, it implies this.pointer.state === APP.INPUT_ACTIVE.
-        this.state = GAME_STATE.ACTIVE;
+        this.setState(GAME_STATE.ACTIVE);
         lineOfSelectedTiles.push(selectedTile);
       }
       
@@ -246,11 +308,11 @@ class App {
       if (this.pointer.state === APP.INPUT_ENDED || this.pointer.state === APP.INPUT_IDLE) {
         if (lineOfSelectedTiles.length >= this.MINIMUM_LINE_LENGTH) {
           //OK, there's a valid line. Pass it to the "busy state" logic to process it.
-          this.state = GAME_STATE.BUSY;
+          this.setState(GAME_STATE.BUSY);
         } else {
           //If there's no valid line, just reset the input.
           this.lineOfSelectedTiles = [];      
-          this.state = GAME_STATE.READY;
+          this.setState(GAME_STATE.READY);
         }
       }
       
@@ -281,7 +343,7 @@ class App {
       
       //Otherwise, it's all good, now let users continue playing.
       if (doneDropping) {
-        this.state = GAME_STATE.READY;
+        this.setState(GAME_STATE.READY);
       }
     }
     //--------------------------------
@@ -433,6 +495,12 @@ class App {
     
     //OK, if there are any empty slots for new food orders, let's fill 'em up!
     this.fillFoodOrders();
+    
+    //Also, count down the number of turns available.
+    this.turnsLeft--;
+    if (this.turnsLeft === 0) {
+      this.setState(GAME_STATE.END_MENU);
+    }
   }
   
   /*  Adds food orders.
@@ -550,7 +618,7 @@ class App {
       this.html.message.textContent = this.message;
       if (this.messageTimer === 0) this.message = "";
     } else {
-      this.html.message.textContent = this.score;
+      this.html.message.textContent = "" + this.score + " points | " + this.turnsLeft + " turns remaining";
     }
     //--------------------------------
   }
@@ -565,24 +633,6 @@ class App {
       //If the tile is dropping, it has a y-offset.
       const offsetY = (tile.isDropping)
         ? this.dropDistance : 0;
-      
-      c2d.beginPath();
-      c2d.arc(
-        tile.col * this.TILE_SIZE + this.TILE_SIZE / 2 + this.GRID_OFFSET_X,
-        tile.row * this.TILE_SIZE + this.TILE_SIZE / 2 + this.GRID_OFFSET_Y + offsetY,
-        this.TILE_SIZE * 0.1, 0, 2 * Math.PI);
-      c2d.closePath();
-      switch (tile.value) {
-        case this.TILES.RED: c2d.fillStyle = "#c33"; break;
-        case this.TILES.BLUE: c2d.fillStyle = "#39c"; break;
-        case this.TILES.YELLOW: c2d.fillStyle = "#fc3"; break;
-        case this.TILES.GREEN: c2d.fillStyle = "#396"; break;
-        case this.TILES.PINK: c2d.fillStyle = "#f9c"; break;
-        case this.TILES.ORANGE: c2d.fillStyle = "#c93"; break;
-        default: c2d.fillStyle = "#333";
-      }
-      c2d.fill();
-      
       
       //Paint the tiles
       const PNG_TILE_SIZE = 32;
@@ -710,7 +760,11 @@ class App {
         "width: " + Math.round(bestFit * this.canvasWidth) + "px; " +
         "height: " + Math.round(bestFit * this.canvasHeight) + "px; ";
       this.html.controls.style =
-        "font-size: " + Math.round(bestFit * appFontSize) + "px";
+        "font-size: " + Math.round(bestFit * appFontSize) + "px; ";
+      this.html.modal.style =
+        "width: " + Math.round(bestFit * appWidth) + "px; " +
+        "height: " + Math.round(bestFit * appHeight) + "px; " +
+        "font-size: " + Math.round(bestFit * appFontSize) + "px; ";
     }
     
     let boundingBox = (this.html.canvas.getBoundingClientRect)
