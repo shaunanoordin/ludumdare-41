@@ -106,3 +106,7 @@ body {
 #app #modal #modal-continue {
   flex: 0 0 auto;
 }
+button {
+  font-family: inherit;
+  font-size: inherit;
+}

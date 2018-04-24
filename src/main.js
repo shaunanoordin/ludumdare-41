@@ -186,6 +186,29 @@ class App {
   
   //----------------------------------------------------------------
   
+  startFreshGame() {
+    this.foodOrders = [];
+    this.fillFoodOrders();
+    
+    this.grid = [];
+    for (let row = -1; row < this.GRID_ROWS; row++) {
+      for (let col = 0; col < this.GRID_COLS; col++) {
+        this.grid.push({
+          row, col,
+          value: this.TILES.random(),
+          isDropping: false,
+        });
+      }
+    }
+    
+    this.lineOfSelectedTiles = [];
+    
+    this.score = 0;
+    this.turnsLeft = this.MAX_TURNS;
+    
+    this.setState(GAME_STATE.READY);
+  }
+  
   setState(state) {
     switch (state) {
       case GAME_STATE.READY:
@@ -196,23 +219,19 @@ class App {
       case GAME_STATE.START_MENU:
         this.html.modal.className = "show ";
         this.html.modalTitle.textContent = "Ludum Dare 41 - Puzzle Chef!";
-        this.html.modalContent.textContent = "Draw a line through the grid of ingredients to match the orders below. Be sure not to mix up ingredients that nobody asked for!";
+        this.html.modalContent.textContent = "Draw a line through the grid of ingredients to match any one of the orders below. However, be sure not to mix in ingredients that nobody asked for!";
         this.html.modalContinue.textContent = "START!";
         this.html.modalContinue.onclick = () => {
-          this.score = 0;
-          this.turnsLeft = this.MAX_TURNS;
-          this.setState(GAME_STATE.READY);
+          this.startFreshGame();
         };
         break;
       case GAME_STATE.END_MENU:
         this.html.modal.className = "show ";
         this.html.modalTitle.textContent = "Cooking time over!";
-        this.html.modalContent.textContent = "You scored " + score + " points!";
+        this.html.modalContent.textContent = "You scored " + this.score + " points!";
         this.html.modalContinue.textContent = "Try again?";
         this.html.modalContinue.onclick = () => {
-          this.score = 0;
-          this.turnsLeft = this.MAX_TURNS;
-          this.setState(GAME_STATE.READY);
+          this.startFreshGame();
         };
         break;
       default:
@@ -476,6 +495,12 @@ class App {
     
     //OK, if there are any empty slots for new food orders, let's fill 'em up!
     this.fillFoodOrders();
+    
+    //Also, count down the number of turns available.
+    this.turnsLeft--;
+    if (this.turnsLeft === 0) {
+      this.setState(GAME_STATE.END_MENU);
+    }
   }
   
   /*  Adds food orders.
