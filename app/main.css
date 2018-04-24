@@ -26,6 +26,7 @@ body {
   flex: 0 0 auto;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 #app #canvas {
   flex: 0 0 auto;
@@ -81,4 +82,27 @@ body {
 }
 #app #controls #orders li .ingredient-6 {
   background-position: -12em 0em;
+}
+#app #modal {
+  flex: 0 0 auto;
+  position: absolute;
+  z-index: 1000;
+  top: 0;
+  left: 0;
+  display: none;
+  flex-direction: column;
+  background: #fff;
+  padding: 3em 1em;
+}
+#app #modal.show {
+  display: flex;
+}
+#app #modal #modal-title {
+  flex: 0 0 auto;
+}
+#app #modal #modal-content {
+  flex: 1 1 auto;
+}
+#app #modal #modal-continue {
+  flex: 0 0 auto;
 }
